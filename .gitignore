@@ -1,0 +1,43 @@
+# Rust / Cargo
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Fuzzing artifacts
+fuzz/target/
+fuzz/corpus/
+fuzz/artifacts/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local test fixtures (real-world GHO/GHS files must never be committed)
+tests/fixtures/local/
+tests/fixtures/community/
+*.gho
+*.GHO
+*.ghs
+*.GHS
+
+# Build artifacts
+*.bin
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Coverage
+coverage/
+*.lcov
+lcov.info
+
+# Tooling state
+.claude/
