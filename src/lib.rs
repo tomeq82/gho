@@ -15,6 +15,7 @@ pub mod ghostold;
 pub mod mbr;
 pub mod safety;
 pub mod span;
+pub mod tui;
 
 pub use error::{Error, Result};
 pub use format::{Format, ImageReader};
