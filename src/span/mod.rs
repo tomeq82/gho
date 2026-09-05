@@ -1,23 +1,24 @@
 //! Multi-file logical stream reader for spanned Norton Ghost images.
 //!
 //! Each physical `.gho`/`.ghs` file starts with a 512-byte file header
-//! (`FEEF` magic). `SpanReader` transparently skips these whenever they appear
-//! in the concatenated logical stream, so callers see one continuous byte
-//! stream.
+//! (`FEEF` magic). When concatenating the physical files into a single
+//! logical stream, **the first file's header is kept** (parsers expect it at
+//! offset 0) and the **continuation-span headers (file_type == 9) are
+//! stripped** at the file boundaries.
 //!
-//! For pre-11.x images the embedded header can land **inside** a compressed
-//! data block; in that case the caller is responsible for pre-concatenating
-//! the physical files and stripping the headers at known offsets before
-//! handing the result to `SpanReader`. The 11.x format is naturally tolerant
-//! of mid-stream headers.
+//! This matches the algorithm used by the Python
+//! `history-recovery/ghost-old-format-2001-survey-full.py::build_logical`.
 
 use crate::error::Result;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::PathBuf;
 
-/// Concatenate the given span files into a single output file, skipping the
-/// 512-byte header at the start of each span.
+/// Concatenate the given span files into a single output file.
+///
+/// The first span's 512-byte file header is preserved at offset 0 of the
+/// output. Continuation-span headers (file_type == 9) are stripped from
+/// their respective file starts before concatenation.
 pub fn concatenate_spans<I, P>(spans: I, out_path: &std::path::Path) -> Result<PathBuf>
 where
     I: IntoIterator<Item = P>,
@@ -29,10 +30,16 @@ where
     }
     let mut out = std::fs::File::create(out_path)?;
     let mut buf = [0u8; 1024 * 1024];
+    let mut first = true;
     for span in spans {
         let mut f = BufReader::new(File::open(span.as_ref())?);
-        // skip 512-byte file header
-        f.seek(SeekFrom::Start(512))?;
+        if first {
+            // Keep the first file's header intact.
+            first = false;
+        } else {
+            // Skip the 512-byte header of continuation spans.
+            f.seek(SeekFrom::Start(512))?;
+        }
         loop {
             let n = f.read(&mut buf)?;
             if n == 0 {
@@ -80,5 +87,42 @@ mod tests {
         assert!(looks_like_header(&hdr));
         hdr[2] = 5;
         assert!(!looks_like_header(&hdr));
+    }
+
+    #[test]
+    fn concat_preserves_first_header_strips_continuation_headers() {
+        let tmp = tempfile::tempdir().unwrap();
+        // File 1: starts with a valid header (file_type=1).
+        let f1 = tmp.path().join("a.gho");
+        let mut c1 = vec![0u8; 1024];
+        c1[0] = 0xFE;
+        c1[1] = 0xEF;
+        c1[2] = 1;
+        for i in 512..1024 {
+            c1[i] = 0xAA;
+        }
+        std::fs::write(&f1, &c1).unwrap();
+        // File 2: starts with a valid header (file_type=9, continuation).
+        let f2 = tmp.path().join("b.ghs");
+        let mut c2 = vec![0u8; 1024];
+        c2[0] = 0xFE;
+        c2[1] = 0xEF;
+        c2[2] = 9;
+        for i in 512..1024 {
+            c2[i] = 0xBB;
+        }
+        std::fs::write(&f2, &c2).unwrap();
+        let out = tmp.path().join("combined.gho");
+        let _ = concatenate_spans([&f1, &f2], &out).unwrap();
+        let bytes = std::fs::read(&out).unwrap();
+        // Expected: file1 entirely (header + body) + file2 body (no header)
+        // = 1024 + 512 = 1536 bytes.
+        assert_eq!(bytes.len(), 1536);
+        // First 512 bytes are file1's header.
+        assert_eq!(&bytes[0..3], &[0xFE, 0xEF, 1]);
+        // Next 512 bytes are file1's body (0xAA).
+        assert!(bytes[512..1024].iter().all(|&b| b == 0xAA));
+        // Last 512 bytes are file2's body (0xBB) — no second header.
+        assert!(bytes[1024..1536].iter().all(|&b| b == 0xBB));
     }
 }
