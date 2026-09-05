@@ -46,7 +46,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build release binary
-        run: cargo build --release --locked --target ${{ matrix.target }} --bin gho
+        run: |
+          # The aarch64-unknown-linux-musl target emits a
+          # --fix-cortex-a53-843419 linker flag that older Ubuntu
+          # runners don't recognise. Strip it.
+          case "${{ matrix.target }}" in
+            aarch64-unknown-linux-musl)
+              export RUSTFLAGS="-C link-arg=-Wl,--no-fix-cortex-a53-843419"
+              ;;
+          esac
+          cargo build --release --locked --target ${{ matrix.target }} --bin gho
 
       - name: Install cosign
         if: ${{ !contains(matrix.target, 'windows') }}
