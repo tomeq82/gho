@@ -13,10 +13,7 @@ pub enum Error {
     Io(#[from] io::Error),
 
     #[error("format error at offset {offset:#x}: {message}")]
-    Format {
-        offset: u64,
-        message: String,
-    },
+    Format { offset: u64, message: String },
 
     #[error("encrypted GHO image is not supported")]
     Encrypted,
@@ -32,10 +29,7 @@ pub enum Error {
     },
 
     #[error("invalid FastLZ block at offset {offset:#x}: {message}")]
-    FastLz {
-        offset: u64,
-        message: String,
-    },
+    FastLz { offset: u64, message: String },
 }
 
 impl Error {

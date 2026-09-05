@@ -68,11 +68,7 @@ pub fn run(args: Args) -> Result<()> {
     let throughput = total_bytes as f64 / elapsed.as_secs_f64() / 1_048_576.0;
     println!(
         "FastLZ decompress: {} iterations × {} bytes = {} total in {:.2?} ({:.2} MiB/s)",
-        args.iterations,
-        block_size,
-        total_bytes,
-        elapsed,
-        throughput
+        args.iterations, block_size, total_bytes, elapsed, throughput
     );
 
     Ok(())

@@ -16,8 +16,8 @@ use std::path::Path;
 
 use crate::error::{Error, Result};
 use crate::fastlz;
-use crate::ghostold::dirent::{Dirent, DIRENT_SIZE};
-use crate::ghostold::record::{Record, RecordType, RECORD_HEADER_SIZE};
+use crate::ghostold::dirent::{DIRENT_SIZE, Dirent};
+use crate::ghostold::record::{RECORD_HEADER_SIZE, Record, RecordType};
 use crate::ghostold::{DATA_FULL_BLOCK_SIZE, HEADER_SIZE};
 
 /// A simple wrapper around `File` that maintains a small lookahead buffer so
@@ -281,7 +281,11 @@ fn make_entry(dirent_offset: u64, dirent: Dirent, data_start_offset: Option<u64>
 /// Advance `reader` past any padding bytes until a position whose bytes 4..8
 /// are the [`RECORD_MAGIC`]. Updates `offset` to reflect the new logical
 /// position. The scan is bounded by `limit` bytes.
-fn scan_for_record_magic(reader: &mut LookaheadReader, offset: &mut u64, limit: usize) -> Result<()> {
+fn scan_for_record_magic(
+    reader: &mut LookaheadReader,
+    offset: &mut u64,
+    limit: usize,
+) -> Result<()> {
     let mut scanned: usize = 0;
     while scanned < limit {
         let peeked = match reader.peek(RECORD_HEADER_SIZE)? {
@@ -331,13 +335,15 @@ pub fn extract_file(image_path: &Path, entry: &WalkedEntry, out_path: &Path) -> 
     for _ in 0..entry.full_block_count {
         let mut rec_hdr = [0u8; RECORD_HEADER_SIZE];
         reader.read_exact(&mut rec_hdr)?;
-        let rec = Record::parse_at(&rec_hdr, 0).ok_or_else(|| {
-            Error::format(0, "expected DATA_FULL record header")
-        })?;
+        let rec = Record::parse_at(&rec_hdr, 0)
+            .ok_or_else(|| Error::format(0, "expected DATA_FULL record header"))?;
         if rec.kind != RecordType::DataFull {
             return Err(Error::format(
                 0,
-                format!("expected DATA_FULL, got {:?} body_len={}", rec.kind, rec.body_len),
+                format!(
+                    "expected DATA_FULL, got {:?} body_len={}",
+                    rec.kind, rec.body_len
+                ),
             ));
         }
         if rec.body_len as usize != DATA_FULL_BLOCK_SIZE {
@@ -369,9 +375,8 @@ pub fn extract_file(image_path: &Path, entry: &WalkedEntry, out_path: &Path) -> 
     if entry.last_block_decompressed_size > 0 {
         let mut rec_hdr = [0u8; RECORD_HEADER_SIZE];
         reader.read_exact(&mut rec_hdr)?;
-        let rec = Record::parse_at(&rec_hdr, 0).ok_or_else(|| {
-            Error::format(0, "expected DATA_LAST record header")
-        })?;
+        let rec = Record::parse_at(&rec_hdr, 0)
+            .ok_or_else(|| Error::format(0, "expected DATA_LAST record header"))?;
         if rec.kind != RecordType::DataLast {
             return Err(Error::format(
                 0,
@@ -397,9 +402,8 @@ pub fn extract_file(image_path: &Path, entry: &WalkedEntry, out_path: &Path) -> 
 
     let mut trailer_hdr = [0u8; RECORD_HEADER_SIZE];
     reader.read_exact(&mut trailer_hdr)?;
-    let rec = Record::parse_at(&trailer_hdr, 0).ok_or_else(|| {
-        Error::format(0, "expected DATA_TRAILER record header")
-    })?;
+    let rec = Record::parse_at(&trailer_hdr, 0)
+        .ok_or_else(|| Error::format(0, "expected DATA_TRAILER record header"))?;
     if rec.kind != RecordType::DataTrailer {
         return Err(Error::format(
             0,
@@ -469,7 +473,13 @@ mod tests {
 
     fn build_stream_one_file(name: &str, ext: &str, payload: &[u8]) -> Vec<u8> {
         let mut s = file_header();
-        s.extend(record(RECORD_TYPE_FIRST_DIRENT, &dirent(name, ext, payload.len() as u32)).iter());
+        s.extend(
+            record(
+                RECORD_TYPE_FIRST_DIRENT,
+                &dirent(name, ext, payload.len() as u32),
+            )
+            .iter(),
+        );
         let full = payload.len() / DATA_FULL_BLOCK_SIZE;
         let last = payload.len() % DATA_FULL_BLOCK_SIZE;
         for i in 0..full {
@@ -612,7 +622,13 @@ mod tests {
         let payload = b"compressed-data".repeat(50);
         let mut s = file_header();
         // First dirent with data
-        s.extend(record(RECORD_TYPE_FIRST_DIRENT, &dirent("DATA    ", "BIN", payload.len() as u32)).iter());
+        s.extend(
+            record(
+                RECORD_TYPE_FIRST_DIRENT,
+                &dirent("DATA    ", "BIN", payload.len() as u32),
+            )
+            .iter(),
+        );
         // Data full + last + trailer
         let full = payload.len() / DATA_FULL_BLOCK_SIZE;
         let last = payload.len() % DATA_FULL_BLOCK_SIZE;

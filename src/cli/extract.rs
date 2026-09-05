@@ -172,11 +172,7 @@ fn extract_ghostold(args: &Args) -> Result<()> {
             Err(e) => {
                 failed += 1;
                 if !args.json {
-                    eprintln!(
-                        "  {} extraction failed: {}",
-                        entry.dirent.display_name(),
-                        e
-                    );
+                    eprintln!("  {} extraction failed: {}", entry.dirent.display_name(), e);
                 }
             }
         }

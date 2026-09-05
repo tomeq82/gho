@@ -30,7 +30,7 @@ proptest! {
         if let Some(rec) = result {
             let expected_type = u16::from_le_bytes([buf[0], buf[1]]);
             let expected_len = u16::from_le_bytes([buf[8], buf[9]]);
-            prop_assert_eq!(u16::from(rec.body_len), expected_len);
+            prop_assert_eq!(rec.body_len, expected_len);
             // We don't decode rec.kind here because we don't have access to
             // RecordType::from_u16 from this module; the parse path is
             // exercised by the unit tests.

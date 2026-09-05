@@ -16,8 +16,8 @@ pub mod record;
 pub mod stream;
 
 pub use header::FileHeader;
-pub use record::{Record, RecordType, KNOWN_RECORD_TYPES, RECORD_HEADER_SIZE, RECORD_MAGIC};
-pub use stream::{extract, ExtractResult, PartitionSummary};
+pub use record::{KNOWN_RECORD_TYPES, RECORD_HEADER_SIZE, RECORD_MAGIC, Record, RecordType};
+pub use stream::{ExtractResult, PartitionSummary, extract};
 
 use crate::error::Result;
 

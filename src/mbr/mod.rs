@@ -41,9 +41,15 @@ pub fn parse(mbr: &[u8]) -> Result<Vec<MbrEntry>> {
         if part_type == 0 {
             continue;
         }
-        let lba_start = u32::from_le_bytes([mbr[off + 8], mbr[off + 9], mbr[off + 10], mbr[off + 11]]);
-        let lba_size = u32::from_le_bytes([mbr[off + 12], mbr[off + 13], mbr[off + 14], mbr[off + 15]]);
-        entries.push(MbrEntry { part_type, lba_start, lba_size });
+        let lba_start =
+            u32::from_le_bytes([mbr[off + 8], mbr[off + 9], mbr[off + 10], mbr[off + 11]]);
+        let lba_size =
+            u32::from_le_bytes([mbr[off + 12], mbr[off + 13], mbr[off + 14], mbr[off + 15]]);
+        entries.push(MbrEntry {
+            part_type,
+            lba_start,
+            lba_size,
+        });
     }
     Ok(entries)
 }
@@ -69,7 +75,14 @@ mod tests {
         mbr[511] = 0xAA;
         let entries = parse(&mbr).unwrap();
         assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0], MbrEntry { part_type: 0x07, lba_start: 63, lba_size: 1000 });
+        assert_eq!(
+            entries[0],
+            MbrEntry {
+                part_type: 0x07,
+                lba_start: 63,
+                lba_size: 1000
+            }
+        );
     }
 
     #[test]

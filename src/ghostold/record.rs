@@ -30,11 +30,11 @@ pub const RECORD_TYPE_PART2_TABLE: u16 = 0x0117;
 
 // Aliases matching the snake_case style used elsewhere in the crate.
 pub use RECORD_TYPE_BOOT_HMR as RECORD_BOOT_HMR;
-pub use RECORD_TYPE_FIRST_DIRENT as RECORD_FIRST_DIRENT;
-pub use RECORD_TYPE_DIRENT as RECORD_DIRENT;
 pub use RECORD_TYPE_DATA_FULL as RECORD_DATA_FULL;
 pub use RECORD_TYPE_DATA_LAST as RECORD_DATA_LAST;
 pub use RECORD_TYPE_DATA_TRAILER as RECORD_DATA_TRAILER;
+pub use RECORD_TYPE_DIRENT as RECORD_DIRENT;
+pub use RECORD_TYPE_FIRST_DIRENT as RECORD_FIRST_DIRENT;
 pub use RECORD_TYPE_PART2_BOOT as RECORD_PART2_BOOT;
 pub use RECORD_TYPE_PART2_TABLE as RECORD_PART2_TABLE;
 
@@ -114,7 +114,10 @@ impl Record {
 
     pub fn parse_strict(buf: &[u8], off: usize) -> Result<Self> {
         Self::parse_at(buf, off).ok_or_else(|| {
-            Error::format(off as u64, "expected record header, found non-matching bytes")
+            Error::format(
+                off as u64,
+                "expected record header, found non-matching bytes",
+            )
         })
     }
 }

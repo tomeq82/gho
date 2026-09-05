@@ -83,9 +83,7 @@ impl Dirent {
         let name = std::str::from_utf8(&self.name)
             .unwrap_or("????????")
             .trim_end();
-        let ext = std::str::from_utf8(&self.ext)
-            .unwrap_or("???")
-            .trim_end();
+        let ext = std::str::from_utf8(&self.ext).unwrap_or("???").trim_end();
         if ext.is_empty() {
             name.to_string()
         } else {

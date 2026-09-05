@@ -47,7 +47,10 @@ fn verify_ghost11(args: &Args) -> Result<()> {
                 "OK: parsed {} records; extracted {} partitions ({} decompressed bytes)",
                 r.partitions.len(),
                 r.partitions.len(),
-                r.partitions.iter().map(|p| p.decompressed_bytes).sum::<u64>()
+                r.partitions
+                    .iter()
+                    .map(|p| p.decompressed_bytes)
+                    .sum::<u64>()
             );
             for p in &r.partitions {
                 println!(
@@ -59,11 +62,7 @@ fn verify_ghost11(args: &Args) -> Result<()> {
         }
         Err(e) => {
             eprintln!("verify failed: {e}");
-            if args.fail_fast {
-                Err(e).context("verify")
-            } else {
-                Err(e).context("verify")
-            }
+            Err(e).context("verify")
         }
     }
 }
@@ -81,16 +80,16 @@ fn verify_ghostold(args: &Args) -> Result<()> {
         if entry.is_empty || entry.data_start_offset.is_none() {
             continue;
         }
-        let out = tmp.path().join(format!("verify_{}.bin", entry.dirent_offset));
+        let out = tmp
+            .path()
+            .join(format!("verify_{}.bin", entry.dirent_offset));
         match gho::ghostold::stream::extract_file(&combined, entry, &out) {
             Ok(_) => checked += 1,
             Err(e) => {
                 failed += 1;
                 if args.fail_fast {
-                    return Err(e).context(format!(
-                        "verify failed on {}",
-                        entry.dirent.display_name()
-                    ));
+                    return Err(e)
+                        .context(format!("verify failed on {}", entry.dirent.display_name()));
                 }
             }
         }

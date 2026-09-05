@@ -62,7 +62,11 @@ fn real_image_span_concat_writes_expected_size() {
     let result = concatenate_spans(paths.iter(), &out).expect("concat");
     let meta = std::fs::metadata(&result).expect("stat");
     // Expected: sum of file sizes minus 512 per continuation span (2 continuations).
-    let expected: u64 = paths.iter().map(|p| std::fs::metadata(p).unwrap().len()).sum::<u64>() - 2 * 512;
+    let expected: u64 = paths
+        .iter()
+        .map(|p| std::fs::metadata(p).unwrap().len())
+        .sum::<u64>()
+        - 2 * 512;
     assert_eq!(meta.len(), expected);
 }
 
@@ -75,7 +79,11 @@ fn real_image_walk_dirents_returns_expected_count() {
     let combined = concatenate_spans(paths.iter(), &out).expect("concat");
     let entries = walk_dirents(&combined).expect("walk");
     // Sanity: a ThinkPad Win95 backup from 2001 has thousands of dirents.
-    assert!(entries.len() > 100, "expected many dirents, got {}", entries.len());
+    assert!(
+        entries.len() > 100,
+        "expected many dirents, got {}",
+        entries.len()
+    );
     // Spot-check: GG.EXE was at 622_592 bytes per history-recovery docs.
     let gg = entries.iter().find(|e| e.dirent.display_name() == "GG.EXE");
     if let Some(entry) = gg {
@@ -126,6 +134,9 @@ fn real_image_extract_setup_exe_matches_python() {
         );
         assert_eq!(written, setup.dirent.size as u64, "size mismatch");
         assert_eq!(extracted.len(), setup.dirent.size as usize);
-        assert!(!extracted.iter().all(|&b| b == 0), "SETUP_{i}.EXE is all zeros");
+        assert!(
+            !extracted.iter().all(|&b| b == 0),
+            "SETUP_{i}.EXE is all zeros"
+        );
     }
 }

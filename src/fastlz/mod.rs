@@ -41,7 +41,11 @@ pub fn decompress(data: &[u8], comp_len: usize) -> Result<Vec<u8>> {
     if comp_len == 0 || data.len() < comp_len {
         return Err(Error::fastlz(
             0,
-            format!("truncated compressed block (len={}, have {})", comp_len, data.len()),
+            format!(
+                "truncated compressed block (len={}, have {})",
+                comp_len,
+                data.len()
+            ),
         ));
     }
 
@@ -108,21 +112,14 @@ pub fn decompress(data: &[u8], comp_len: usize) -> Result<Vec<u8>> {
                     if out.len() >= MAX_BLOCK_DECOMPRESSED {
                         return Err(Error::fastlz(
                             0,
-                            format!(
-                                "decompressed output exceeds max {}",
-                                MAX_BLOCK_DECOMPRESSED
-                            ),
+                            format!("decompressed output exceeds max {}", MAX_BLOCK_DECOMPRESSED),
                         ));
                     }
                     if match_pos == usize::MAX {
                         out.push(FASTLZ_SENTINEL.get(j).copied().unwrap_or(0));
                     } else {
                         let src_idx = match_pos + j;
-                        out.push(if src_idx < out.len() {
-                            out[src_idx]
-                        } else {
-                            0
-                        });
+                        out.push(if src_idx < out.len() { out[src_idx] } else { 0 });
                     }
                 }
 
@@ -166,11 +163,9 @@ pub fn decompress(data: &[u8], comp_len: usize) -> Result<Vec<u8>> {
 
                 if literal_run == 3 {
                     let pos = out.len() - 3;
-                    hash_table[fastlz_hash(
-                        out[pos] as u32,
-                        out[pos + 1] as u32,
-                        out[pos + 2] as u32,
-                    )] = pos;
+                    hash_table
+                        [fastlz_hash(out[pos] as u32, out[pos + 1] as u32, out[pos + 2] as u32)] =
+                        pos;
                     literal_run = 2;
                     prev_literal_run = 2;
                 }
@@ -208,14 +203,13 @@ mod tests {
     /// Trusted reference block captured from a known-good encode of `b"ABC" * 240`.
     /// Source: history-recovery/tests/test_ghost_image.py::KNOWN_FASTLZ_BLOCK (93 bytes).
     const KNOWN_FASTLZ_BLOCK: [u8; 93] = [
-        0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0x41, 0x42, 0x43, 0xdf, 0x9b, 0xdf,
-        0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf,
-        0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xff,
-        0xff, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf,
-        0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf,
-        0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xff, 0x07, 0xdf,
-        0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf,
-        0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdc, 0x9b,
+        0x00, 0x00, 0x00, 0x00, 0xf8, 0xff, 0x41, 0x42, 0x43, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b,
+        0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf,
+        0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xff, 0xff, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b,
+        0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf,
+        0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xff, 0x07, 0xdf, 0x9b, 0xdf, 0x9b,
+        0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf, 0x9b, 0xdf,
+        0x9b, 0xdc, 0x9b,
     ];
 
     fn expected_abc_240() -> Vec<u8> {

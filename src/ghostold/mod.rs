@@ -18,11 +18,11 @@ pub mod stream;
 
 pub use dirent::Dirent;
 pub use record::{
-    KNOWN_RECORD_TYPES, RECORD_DATA_FULL, RECORD_DATA_LAST, RECORD_DATA_TRAILER,
-    RECORD_DIRENT, RECORD_FIRST_DIRENT, RECORD_HEADER_SIZE, RECORD_MAGIC,
-    RECORD_PART2_BOOT, RECORD_PART2_TABLE, RECORD_TYPE_BOOT_HMR, Record, RecordType,
+    KNOWN_RECORD_TYPES, RECORD_DATA_FULL, RECORD_DATA_LAST, RECORD_DATA_TRAILER, RECORD_DIRENT,
+    RECORD_FIRST_DIRENT, RECORD_HEADER_SIZE, RECORD_MAGIC, RECORD_PART2_BOOT, RECORD_PART2_TABLE,
+    RECORD_TYPE_BOOT_HMR, Record, RecordType,
 };
-pub use stream::{extract_file, walk_dirents, WalkedEntry};
+pub use stream::{WalkedEntry, extract_file, walk_dirents};
 
 /// `FEEF` magic at the start of every `.gho` / `.ghs` file.
 pub const GHO_MAGIC: u16 = 0xEFFE;

@@ -11,9 +11,10 @@ use std::path::{Path, PathBuf};
 use crate::error::{Error, Result};
 use crate::fastlz;
 use crate::ghost11::{
+    Compression, HEADER_SIZE,
     header::FileHeader,
-    record::{RecordType, RECORD_HEADER_SIZE},
-    looks_like_embedded_file_header, looks_like_record, Compression, HEADER_SIZE,
+    looks_like_embedded_file_header, looks_like_record,
+    record::{RECORD_HEADER_SIZE, RecordType},
 };
 use crate::mbr::parse as parse_mbr;
 
@@ -53,9 +54,9 @@ fn read_and_decompress_block<R: Read>(
     if stored_len == 0 {
         return Ok(Vec::new());
     }
-    let comp_len = stored_len.checked_sub(2).ok_or_else(|| {
-        Error::format(offset, format!("invalid block stored_len={stored_len}"))
-    })?;
+    let comp_len = stored_len
+        .checked_sub(2)
+        .ok_or_else(|| Error::format(offset, format!("invalid block stored_len={stored_len}")))?;
     if comp_len > MAX_BLOCK_STORED {
         return Err(Error::format(
             offset,
@@ -72,9 +73,7 @@ fn decompress_block(block: &[u8], compression: Compression, offset: u64) -> Resu
     match compression {
         Compression::None => Ok(block.to_vec()),
         Compression::FastLz => fastlz::decompress(block, block.len()).map_err(|e| match e {
-            Error::FastLz { message, .. } => {
-                Error::fastlz(offset, message)
-            }
+            Error::FastLz { message, .. } => Error::fastlz(offset, message),
             other => other,
         }),
         Compression::Zlib => {
@@ -164,7 +163,9 @@ pub fn extract(image_path: &Path, out_dir: &Path) -> Result<ExtractResult> {
                     if let Some(mut w) = current_writer.take() {
                         let _ = w.flush();
                     }
-                    if let (Some(idx), Some(path)) = (usize::try_from(current_index).ok(), current_path.take()) {
+                    if let (Some(idx), Some(path)) =
+                        (usize::try_from(current_index).ok(), current_path.take())
+                    {
                         let mbr_type = if idx < mbr_entries.len() {
                             Some(mbr_entries[idx].part_type)
                         } else {
@@ -230,7 +231,9 @@ pub fn extract(image_path: &Path, out_dir: &Path) -> Result<ExtractResult> {
                     if let Some(mut w) = current_writer.take() {
                         let _ = w.flush();
                     }
-                    if let (Some(idx), Some(path)) = (usize::try_from(current_index).ok(), current_path.take()) {
+                    if let (Some(idx), Some(path)) =
+                        (usize::try_from(current_index).ok(), current_path.take())
+                    {
                         let mbr_type = if idx < mbr_entries.len() {
                             Some(mbr_entries[idx].part_type)
                         } else {
@@ -303,8 +306,8 @@ fn looks_like_embedded_file_header_at<R: Read + Seek>(
 mod tests {
     use super::*;
     use crate::ghost11::{
-        record::{RecordType, RECORD_TYPE_PARTITION, RECORD_TYPE_TRACK0},
         HEADER_SIZE,
+        record::{RECORD_TYPE_PARTITION, RECORD_TYPE_TRACK0, RecordType},
     };
     use std::io::Cursor;
 
@@ -363,7 +366,10 @@ mod tests {
         assert_eq!(result.partitions.len(), 1);
         let got = std::fs::read(&result.partitions[0].output_path).unwrap();
         assert_eq!(got, payload);
-        assert_eq!(result.partitions[0].decompressed_bytes, payload.len() as u64);
+        assert_eq!(
+            result.partitions[0].decompressed_bytes,
+            payload.len() as u64
+        );
     }
 
     #[test]
@@ -377,8 +383,14 @@ mod tests {
         let out_dir = tmp.path().join("out");
         let result = extract(&img, &out_dir).unwrap();
         assert_eq!(result.partitions.len(), 2);
-        assert_eq!(std::fs::read(&result.partitions[0].output_path).unwrap(), p1);
-        assert_eq!(std::fs::read(&result.partitions[1].output_path).unwrap(), p2);
+        assert_eq!(
+            std::fs::read(&result.partitions[0].output_path).unwrap(),
+            p1
+        );
+        assert_eq!(
+            std::fs::read(&result.partitions[1].output_path).unwrap(),
+            p2
+        );
     }
 
     #[test]

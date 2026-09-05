@@ -82,7 +82,10 @@ impl Record {
     /// Strict parse: returns an error if the bytes at `off` are not a record.
     pub fn parse_strict(buf: &[u8], off: usize) -> Result<Self> {
         Self::parse_at(buf, off).ok_or_else(|| {
-            Error::format(off as u64, "expected record header, found non-matching bytes")
+            Error::format(
+                off as u64,
+                "expected record header, found non-matching bytes",
+            )
         })
     }
 }

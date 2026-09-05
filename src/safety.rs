@@ -144,11 +144,19 @@ mod tests {
 
     #[test]
     fn parent_traversal_detected() {
-        assert!(contains_parent_traversal(std::path::Path::new("../etc/passwd")));
-        assert!(contains_parent_traversal(std::path::Path::new("foo/../../bar")));
-        assert!(!contains_parent_traversal(std::path::Path::new("foo/bar.txt")));
+        assert!(contains_parent_traversal(std::path::Path::new(
+            "../etc/passwd"
+        )));
+        assert!(contains_parent_traversal(std::path::Path::new(
+            "foo/../../bar"
+        )));
+        assert!(!contains_parent_traversal(std::path::Path::new(
+            "foo/bar.txt"
+        )));
         // Absolute paths are NOT flagged here — the caller is responsible
         // for resolving against a trusted base.
-        assert!(!contains_parent_traversal(std::path::Path::new("/etc/passwd")));
+        assert!(!contains_parent_traversal(std::path::Path::new(
+            "/etc/passwd"
+        )));
     }
 }

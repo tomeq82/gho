@@ -7,7 +7,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use gho::ghost11::{FileHeader, HEADER_SIZE as GHOST11_HEADER_SIZE};
-use gho::ghostold::{record::RECORD_MAGIC, HEADER_SIZE as GHOSTOLD_HEADER_SIZE};
+use gho::ghostold::{HEADER_SIZE as GHOSTOLD_HEADER_SIZE, record::RECORD_MAGIC};
 
 #[derive(Debug, ClapArgs)]
 pub struct InfoArgs {
@@ -102,8 +102,7 @@ pub fn run(args: Args) -> Result<()> {
     };
 
     for path in &args.inputs {
-        let meta = std::fs::metadata(path)
-            .with_context(|| format!("stat {}", path.display()))?;
+        let meta = std::fs::metadata(path).with_context(|| format!("stat {}", path.display()))?;
         let hdr = read_header(path).unwrap_or([0u8; GHOST11_HEADER_SIZE]);
         let file_type = hdr.get(2).copied().unwrap_or(255);
         info.files.push(FileInfo {
@@ -189,12 +188,7 @@ fn print_human(info: &InfoOutput) {
             9 => "continuation",
             _ => "?",
         };
-        println!(
-            "  {} ({} B, type {})",
-            f.path,
-            f.size_bytes,
-            type_str
-        );
+        println!("  {} ({} B, type {})", f.path, f.size_bytes, type_str);
     }
 }
 
