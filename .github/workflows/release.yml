@@ -148,7 +148,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/tomeq82/gho:${{ github.ref_name }}
+          tags: |
+            ghcr.io/tomeq82/gho:${{ github.ref_name }}
             ghcr.io/tomeq82/gho:latest
 
   release:
