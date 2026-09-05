@@ -64,8 +64,14 @@ jobs:
         run: |
           # Pick the right binary for this OS / arch.
           case "${{ matrix.os }}" in
-            ubuntu-latest|ubuntu-24.04|ubuntu-24.04-arm)
+            ubuntu-latest|ubuntu-24.04)
               BIN=cosign-linux-amd64
+              DEST=/usr/local/bin/cosign
+              curl -fsSL "https://github.com/sigstore/cosign/releases/latest/download/${BIN}" -o "${DEST}"
+              chmod +x "${DEST}"
+              ;;
+            ubuntu-24.04-arm)
+              BIN=cosign-linux-arm64
               DEST=/usr/local/bin/cosign
               curl -fsSL "https://github.com/sigstore/cosign/releases/latest/download/${BIN}" -o "${DEST}"
               chmod +x "${DEST}"
