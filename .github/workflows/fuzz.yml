@@ -1,0 +1,28 @@
+name: fuzz
+
+on:
+  schedule:
+    # Run nightly at 02:30 UTC
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  fuzz:
+    name: fuzz (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [fastlz_decompress, ghost11_extract, ghostold_walk]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+      - name: cargo-fuzz install
+        run: cargo install cargo-fuzz
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - name: fuzz ${{ matrix.target }} (10 min)
+        run: cargo +nightly fuzz run ${{ matrix.target }} -- -max_total_time=600
