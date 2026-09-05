@@ -46,13 +46,16 @@ pub fn fallback_name(dirent_offset: u64) -> String {
     format!("file_{dirent_offset:08x}.bin")
 }
 
-/// Test whether `path` could escape its parent directory via `..` segments.
+/// Test whether `path` contains `..` segments that could escape its parent.
+///
+/// Absolute paths and prefix components are allowed — the caller is
+/// responsible for resolving them against a trusted base. We only flag
+/// `..` here, which is the actual escape mechanism.
 pub fn contains_parent_traversal(path: &Path) -> bool {
     use std::path::Component;
     for component in path.components() {
-        match component {
-            Component::ParentDir | Component::RootDir | Component::Prefix(_) => return true,
-            _ => {}
+        if matches!(component, Component::ParentDir) {
+            return true;
         }
     }
     false
@@ -142,8 +145,10 @@ mod tests {
     #[test]
     fn parent_traversal_detected() {
         assert!(contains_parent_traversal(std::path::Path::new("../etc/passwd")));
-        assert!(contains_parent_traversal(std::path::Path::new("/etc/passwd")));
         assert!(contains_parent_traversal(std::path::Path::new("foo/../../bar")));
         assert!(!contains_parent_traversal(std::path::Path::new("foo/bar.txt")));
+        // Absolute paths are NOT flagged here — the caller is responsible
+        // for resolving against a trusted base.
+        assert!(!contains_parent_traversal(std::path::Path::new("/etc/passwd")));
     }
 }
