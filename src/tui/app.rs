@@ -84,6 +84,23 @@ pub struct AppState {
 
     /// Current status message (shown in the bottom bar).
     pub status: Option<StatusMessage>,
+
+    /// Loaded image — populated when the user opens a real image. We
+    /// keep this as `Option<Box<dyn Any>>`-shaped via enum dispatch to
+    /// keep the AppState `Clone`able for snapshotting.
+    pub image: Option<LoadedImage>,
+
+    /// Hex viewer's top-row byte offset. Zero means "from the start".
+    pub hex_scroll: usize,
+}
+
+/// Either a 11.x image or a pre-11.x image. Each variant carries the
+/// browse state plus enough metadata to render the partition / dirent
+/// list without holding extra references into the parser.
+#[derive(Debug, Clone)]
+pub enum LoadedImage {
+    Ghost11(crate::tui::browse::image11::Image11State),
+    GhostOld(crate::tui::browse::image_old::ImageOldState),
 }
 
 impl AppState {
@@ -97,6 +114,8 @@ impl AppState {
             focus: FocusPanel::Left,
             inputs,
             status: Some(StatusMessage::info("loading...")),
+            image: None,
+            hex_scroll: 0,
         }
     }
 
@@ -110,6 +129,8 @@ impl AppState {
             focus: FocusPanel::Left,
             inputs,
             status: Some(StatusMessage::info("loading...")),
+            image: None,
+            hex_scroll: 0,
         }
     }
 
@@ -130,6 +151,48 @@ impl AppState {
     /// Clear the status (used when a transient message times out).
     pub fn clear_status(&mut self) {
         self.status = None;
+    }
+
+    /// Byte offset in the currently-previewed buffer (hex widget).
+    pub fn hex_scroll(&self) -> usize {
+        self.hex_scroll
+    }
+
+    /// Loaded image's first input path (None in early states).
+    pub fn primary_input(&self) -> Option<&PathBuf> {
+        self.inputs.first()
+    }
+
+    pub fn image11(&self) -> Option<&crate::tui::browse::image11::Image11State> {
+        match &self.image {
+            Some(LoadedImage::Ghost11(s)) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn image11_mut(&mut self) -> Option<&mut crate::tui::browse::image11::Image11State> {
+        match &mut self.image {
+            Some(LoadedImage::Ghost11(s)) => Some(s),
+            _ => None,
+        }
+    }
+}
+
+/// Hex viewer's scroll byte offset. Kept on `AppState` so the event
+/// loop can update it without juggling borrows.
+pub const HEX_SCROLL_DEFAULT: usize = 0;
+
+impl AppState {
+    // Tiny helper so the field is on AppState without bloating the struct
+    // with another option. We track the byte offset of the topmost row in
+    // the hex viewer; `HEX_SCROLL_DEFAULT` (0) means "from the start".
+    pub fn hex_scroll_set(&mut self, off: usize) {
+        self.hex_scroll = off;
+    }
+
+    pub fn hex_scroll_bump(&mut self, delta: isize) {
+        let new = (self.hex_scroll as isize + delta).max(0) as usize;
+        self.hex_scroll = new;
     }
 }
 
@@ -162,5 +225,19 @@ mod tests {
         s.set_status(StatusMessage::error("second"));
         assert_eq!(s.status.as_ref().unwrap().text, "second");
         assert_eq!(s.status.as_ref().unwrap().level, StatusLevel::Error);
+    }
+
+    #[test]
+    fn hex_scroll_default_and_bump() {
+        let mut s = AppState::browse(vec![]);
+        assert_eq!(s.hex_scroll(), 0);
+        s.hex_scroll_bump(64);
+        assert_eq!(s.hex_scroll(), 64);
+        s.hex_scroll_bump(-32);
+        assert_eq!(s.hex_scroll(), 32);
+        s.hex_scroll_bump(-100);
+        assert_eq!(s.hex_scroll(), 0, "should not underflow");
+        s.hex_scroll_set(512);
+        assert_eq!(s.hex_scroll(), 512);
     }
 }
