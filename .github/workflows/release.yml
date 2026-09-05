@@ -58,16 +58,34 @@ jobs:
           cargo build --release --locked --target ${{ matrix.target }} --bin gho
 
       - name: Install cosign
-        if: ${{ !contains(matrix.target, 'windows') }}
         run: |
-          curl -fsSL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
-          chmod +x /usr/local/bin/cosign
-
-      - name: Install cosign (windows)
-        if: ${{ contains(matrix.target, 'windows') }}
-        run: |
-          curl -fsSL https://github.com/sigstore/cosign/releases/latest/download/cosign-windows-amd64.exe -o cosign.exe
-          mkdir -p /c/Users/runneradmin/bin && mv cosign.exe /c/Users/runneradmin/bin/
+          # Pick the right binary for this OS / arch.
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              BIN=cosign-linux-amd64
+              DEST=/usr/local/bin/cosign
+              curl -fsSL "https://github.com/sigstore/cosign/releases/latest/download/${BIN}" -o "${DEST}"
+              chmod +x "${DEST}"
+              ;;
+            macos-13)
+              BIN=cosign-darwin-amd64
+              DEST=/usr/local/bin/cosign
+              sudo curl -fsSL "https://github.com/sigstore/cosign/releases/latest/download/${BIN}" -o "${DEST}"
+              sudo chmod +x "${DEST}"
+              ;;
+            macos-latest)
+              BIN=cosign-darwin-arm64
+              DEST=/usr/local/bin/cosign
+              sudo curl -fsSL "https://github.com/sigstore/cosign/releases/latest/download/${BIN}" -o "${DEST}"
+              sudo chmod +x "${DEST}"
+              ;;
+            windows-latest)
+              BIN=cosign-windows-amd64.exe
+              mkdir -p "$HOME/bin"
+              curl -fsSL "https://github.com/sigstore/cosign/releases/latest/download/${BIN}" -o "$HOME/bin/cosign.exe"
+              echo "$HOME/bin" >> "$GITHUB_PATH"
+              ;;
+          esac
 
       - name: Package
         shell: bash
