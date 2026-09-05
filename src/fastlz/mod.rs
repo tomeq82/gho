@@ -34,6 +34,9 @@ fn fastlz_hash(b0: u32, b1: u32, b2: u32) -> usize {
 ///   the literal payload follows at offset 4.
 /// - byte 0 != 1 → compressed; bytes 0..4 are a literal-run control prefix,
 ///   then a stream of 16-bit control words and literals / back-references.
+///
+/// Output is capped at [`MAX_BLOCK_DECOMPRESSED`] bytes to defend against
+/// decompression bombs.
 pub fn decompress(data: &[u8], comp_len: usize) -> Result<Vec<u8>> {
     if comp_len == 0 || data.len() < comp_len {
         return Err(Error::fastlz(
@@ -49,11 +52,20 @@ pub fn decompress(data: &[u8], comp_len: usize) -> Result<Vec<u8>> {
         if comp_len < 4 + n {
             return Err(Error::fastlz(0, "truncated uncompressed block"));
         }
+        if n > MAX_BLOCK_DECOMPRESSED {
+            return Err(Error::fastlz(
+                0,
+                format!(
+                    "uncompressed block length {} exceeds max {}",
+                    n, MAX_BLOCK_DECOMPRESSED
+                ),
+            ));
+        }
         return Ok(data[4..4 + n].to_vec());
     }
 
     let mut hash_table = [usize::MAX; FASTLZ_HASH_SIZE];
-    let mut out = Vec::with_capacity(comp_len * 4);
+    let mut out = Vec::with_capacity(comp_len.min(MAX_BLOCK_DECOMPRESSED));
     let mut src = 4usize;
     let src_end = comp_len;
     let mut control: u32 = 1;
@@ -93,6 +105,15 @@ pub fn decompress(data: &[u8], comp_len: usize) -> Result<Vec<u8>> {
                 let total_copy = 3 + extra_len;
 
                 for j in 0..total_copy {
+                    if out.len() >= MAX_BLOCK_DECOMPRESSED {
+                        return Err(Error::fastlz(
+                            0,
+                            format!(
+                                "decompressed output exceeds max {}",
+                                MAX_BLOCK_DECOMPRESSED
+                            ),
+                        ));
+                    }
                     if match_pos == usize::MAX {
                         out.push(FASTLZ_SENTINEL.get(j).copied().unwrap_or(0));
                     } else {
@@ -132,6 +153,12 @@ pub fn decompress(data: &[u8], comp_len: usize) -> Result<Vec<u8>> {
 
                 hash_table[hash_idx] = match_start;
             } else {
+                if out.len() >= MAX_BLOCK_DECOMPRESSED {
+                    return Err(Error::fastlz(
+                        0,
+                        format!("decompressed output exceeds max {}", MAX_BLOCK_DECOMPRESSED),
+                    ));
+                }
                 literal_run += 1;
                 out.push(data[src]);
                 src += 1;
@@ -165,6 +192,14 @@ pub const BLOCK_SIZE: usize = 32 * 1024;
 /// Maximum length of a single compressed / uncompressed block payload
 /// (excluding the 2-byte stored_len prefix that wraps every block on disk).
 pub const MAX_BLOCK_STORED: usize = BLOCK_SIZE + 4 + 2;
+
+/// Maximum decompressed output size for a single FastLZ block (defends
+/// against decompression bombs — see `docs/SECURITY.md`).
+///
+/// A real Ghost block decompresses to at most `BLOCK_SIZE` (32 KiB). We
+/// allow a 4× margin for malformed inputs and round to the next power of
+/// two for cleanliness.
+pub const MAX_BLOCK_DECOMPRESSED: usize = BLOCK_SIZE * 4;
 
 #[cfg(test)]
 mod tests {

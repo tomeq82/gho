@@ -1,0 +1,24 @@
+[package]
+name = "gho-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+gho = { path = ".." }
+libfuzzer-sys = "0.4"
+
+[[bin]]
+name = "fastlz_decompress"
+path = "fuzz_targets/fastlz_decompress.rs"
+
+[[bin]]
+name = "ghost11_extract"
+path = "fuzz_targets/ghost11_extract.rs"
+
+[[bin]]
+name = "ghostold_walk"
+path = "fuzz_targets/ghostold_walk.rs"

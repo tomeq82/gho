@@ -109,7 +109,7 @@ fn real_image_extract_setup_exe_matches_python() {
 
     // Extract each candidate and report size + first 32 bytes for diff against
     // the Python extraction.
-    'outer: for (i, setup) in setups.iter().enumerate() {
+    for (i, setup) in setups.iter().enumerate() {
         let out_file = tmp.path().join(format!("SETUP_{i}.EXE"));
         let written = extract_file(&combined, setup, &out_file).expect("extract");
         let extracted = std::fs::read(&out_file).expect("read");

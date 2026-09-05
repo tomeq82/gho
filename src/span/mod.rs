@@ -98,8 +98,8 @@ mod tests {
         c1[0] = 0xFE;
         c1[1] = 0xEF;
         c1[2] = 1;
-        for i in 512..1024 {
-            c1[i] = 0xAA;
+        for byte in c1.iter_mut().take(1024).skip(512) {
+            *byte = 0xAA;
         }
         std::fs::write(&f1, &c1).unwrap();
         // File 2: starts with a valid header (file_type=9, continuation).
@@ -108,8 +108,8 @@ mod tests {
         c2[0] = 0xFE;
         c2[1] = 0xEF;
         c2[2] = 9;
-        for i in 512..1024 {
-            c2[i] = 0xBB;
+        for byte in c2.iter_mut().take(1024).skip(512) {
+            *byte = 0xBB;
         }
         std::fs::write(&f2, &c2).unwrap();
         let out = tmp.path().join("combined.gho");

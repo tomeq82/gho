@@ -13,6 +13,7 @@ pub mod format;
 pub mod ghost11;
 pub mod ghostold;
 pub mod mbr;
+pub mod safety;
 pub mod span;
 
 pub use error::{Error, Result};
