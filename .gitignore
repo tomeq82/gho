@@ -42,3 +42,7 @@ lcov.info
 
 # Tooling state
 .claude/
+
+# AFL++ fuzzing artifacts
+fuzz_afl/target/
+fuzz_afl/corpus/
