@@ -1,7 +1,8 @@
 # Rust / Cargo
+# Cargo.lock is committed for binaries (reproducible builds)
+
 target/
 **/*.rs.bk
-Cargo.lock
 
 # Fuzzing artifacts
 fuzz/target/
