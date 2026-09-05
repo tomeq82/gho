@@ -46,6 +46,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build release binary
+        shell: bash
         run: |
           # The aarch64-unknown-linux-musl target emits a
           # --fix-cortex-a53-843419 linker flag that older Ubuntu
@@ -59,6 +60,7 @@ jobs:
           cargo build --release --locked --target ${{ matrix.target }} --bin gho
 
       - name: Install cosign
+        shell: bash
         run: |
           # Pick the right binary for this OS / arch.
           case "${{ matrix.os }}" in
@@ -101,6 +103,7 @@ jobs:
           sha256sum dist/gho-${{ matrix.target }}.* > dist/gho-${{ matrix.target }}.sha256
 
       - name: cosign sign-blob
+        shell: bash
         env:
           COSIGN_EXPERIMENTAL: "1"
         run: |
