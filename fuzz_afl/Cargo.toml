@@ -1,0 +1,20 @@
+[package]
+name = "gho-afl"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[dependencies]
+gho = { path = ".." }
+
+[[bin]]
+name = "fastlz_decompress"
+path = "src/fastlz_decompress.rs"
+
+[[bin]]
+name = "ghost11_extract"
+path = "src/ghost11_extract.rs"
+
+[[bin]]
+name = "ghostold_walk"
+path = "src/ghostold_walk.rs"
