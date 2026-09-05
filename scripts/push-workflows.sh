@@ -28,11 +28,20 @@ FILES=(
 for f in "${FILES[@]}"; do
   echo "Pushing $f..."
   CONTENT=$(base64 -w 0 "$f")
+  # Get the current SHA for existing files (needed for updates)
+  SHA=$(curl -s -H "Authorization: Bearer ${GH_TOKEN}" \
+    "https://api.github.com/repos/${REPO}/contents/${f}" 2>/dev/null \
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('sha',''))" 2>/dev/null || echo "")
+  if [[ -n "${SHA}" ]]; then
+    PAYLOAD=$(jq -n --arg msg "Update ${f}" --arg content "${CONTENT}" --arg sha "${SHA}" '{message: $msg, content: $content, sha: $sha}')
+  else
+    PAYLOAD=$(jq -n --arg msg "Add ${f}" --arg content "${CONTENT}" '{message: $msg, content: $content}')
+  fi
   HTTP_CODE=$(curl -s -o /tmp/push-resp.json -w "%{http_code}" \
     -X PUT "https://api.github.com/repos/${REPO}/contents/${f}" \
     -H "Authorization: Bearer ${GH_TOKEN}" \
     -H "Content-Type: application/json" \
-    -d "$(jq -n --arg msg "Add ${f}" --arg content "${CONTENT}" '{message: $msg, content: $content}')")
+    -d "${PAYLOAD}")
   if [[ "${HTTP_CODE}" =~ ^2 ]]; then
     echo "  OK"
   else
