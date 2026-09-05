@@ -48,6 +48,18 @@ jobs:
       - name: Build release binary
         run: cargo build --release --locked --target ${{ matrix.target }} --bin gho
 
+      - name: Install cosign
+        if: ${{ !contains(matrix.target, 'windows') }}
+        run: |
+          curl -fsSL https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64 -o /usr/local/bin/cosign
+          chmod +x /usr/local/bin/cosign
+
+      - name: Install cosign (windows)
+        if: ${{ contains(matrix.target, 'windows') }}
+        run: |
+          curl -fsSL https://github.com/sigstore/cosign/releases/latest/download/cosign-windows-amd64.exe -o cosign.exe
+          mkdir -p /c/Users/runneradmin/bin && mv cosign.exe /c/Users/runneradmin/bin/
+
       - name: Package
         shell: bash
         run: |
