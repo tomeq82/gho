@@ -49,10 +49,11 @@ jobs:
         run: |
           # The aarch64-unknown-linux-musl target emits a
           # --fix-cortex-a53-843419 linker flag that older Ubuntu
-          # runners don't recognise. Strip it.
+          # runners don't recognise. Disable self-contained linking
+          # so the flag isn't added.
           case "${{ matrix.target }}" in
             aarch64-unknown-linux-musl)
-              export RUSTFLAGS="-C link-arg=-Wl,--no-fix-cortex-a53-843419"
+              export RUSTFLAGS="-C link-self-contained=no"
               ;;
           esac
           cargo build --release --locked --target ${{ matrix.target }} --bin gho
