@@ -147,9 +147,15 @@ fn handle_action(state: &mut AppState, action: Action) {
             if let Some(img) = state.image11_mut() {
                 img.move_cursor(-1);
             }
+            if let Some(img) = state.image_old_mut() {
+                img.move_cursor(-1);
+            }
         }
         Action::Down => {
             if let Some(img) = state.image11_mut() {
+                img.move_cursor(1);
+            }
+            if let Some(img) = state.image_old_mut() {
                 img.move_cursor(1);
             }
         }
@@ -157,9 +163,15 @@ fn handle_action(state: &mut AppState, action: Action) {
             if let Some(img) = state.image11_mut() {
                 img.move_cursor(-10);
             }
+            if let Some(img) = state.image_old_mut() {
+                img.move_cursor(-10);
+            }
         }
         Action::PageDown => {
             if let Some(img) = state.image11_mut() {
+                img.move_cursor(10);
+            }
+            if let Some(img) = state.image_old_mut() {
                 img.move_cursor(10);
             }
         }
@@ -169,14 +181,44 @@ fn handle_action(state: &mut AppState, action: Action) {
                 img.selected = 0;
                 img.scroll = 0;
             }
+            if let Some(img) = state.image_old_mut() {
+                img.move_cursor(isize::MIN / 2);
+                img.selected = crate::tui::browse::image_old::TreePath::root();
+                img.scroll = 0;
+            }
         }
         Action::End => {
             if let Some(img) = state.image11_mut() {
                 img.move_cursor(isize::MAX / 2);
             }
+            if let Some(img) = state.image_old_mut() {
+                img.move_cursor(isize::MAX / 2);
+            }
         }
-        // Left/Right/Enter/Back are routed in Week 3 (pre-11.x tree).
-        Action::Left | Action::Right | Action::Enter | Action::Back => {}
+        // Left/Right/Enter/Back: pre-11.x directory expand/collapse.
+        Action::Enter | Action::Right => {
+            if let Some(img) = state.image_old_mut() {
+                let path = img.selected.clone();
+                if let Some(idx) = img.tree.find(&path) {
+                    if img.tree.is_dir(idx) {
+                        img.expand(path);
+                    }
+                }
+            }
+        }
+        Action::Left | Action::Back => {
+            if let Some(img) = state.image_old_mut() {
+                let path = img.selected.clone();
+                if let Some(idx) = img.tree.find(&path) {
+                    if img.tree.is_dir(idx) {
+                        img.collapse(path);
+                    } else {
+                        // File: jump to parent.
+                        img.selected = path.parent();
+                    }
+                }
+            }
+        }
         Action::Expand | Action::Collapse | Action::Preview | Action::Extract => {}
         Action::NextDiff | Action::PrevDiff | Action::SwitchSide => {}
         Action::Search | Action::SearchNext | Action::SearchPrev => {}
@@ -192,6 +234,11 @@ fn handle_action(state: &mut AppState, action: Action) {
             img.ensure_visible(24);
         }
     }
+    if matches!(state.image, Some(LoadedImage::GhostOld(_))) {
+        if let Some(img) = state.image_old_mut() {
+            img.ensure_visible(24);
+        }
+    }
 }
 
 /// Try to load the image(s) into `state.image`. Called once at startup.
@@ -204,15 +251,29 @@ fn try_load_images(state: &mut AppState) {
             let Some(path) = state.primary_input().cloned() else {
                 return;
             };
-            match load_browse(path) {
+            let load11 = load_browse(path.clone());
+            match load11 {
                 Ok(img) => {
                     state.image = Some(LoadedImage::Ghost11(img));
                     state.set_status(crate::tui::app::StatusMessage::ok("image loaded"));
                 }
                 Err(e) => {
-                    state.set_status(crate::tui::app::StatusMessage::error(format!(
-                        "load failed: {e}"
-                    )));
+                    // Fall back to pre-11.x loading. walk_dirents works on
+                    // any image regardless of declared format.
+                    let mut old = crate::tui::browse::image_old::ImageOldState::new(path.clone());
+                    match old.load() {
+                        Ok(()) => {
+                            state.image = Some(LoadedImage::GhostOld(old));
+                            state.set_status(crate::tui::app::StatusMessage::ok(
+                                "image loaded (pre-11.x dirent tree)",
+                            ));
+                        }
+                        Err(e2) => {
+                            state.set_status(crate::tui::app::StatusMessage::error(format!(
+                                "load failed: 11.x: {e}; pre-11.x: {e2}"
+                            )));
+                        }
+                    }
                 }
             }
         }

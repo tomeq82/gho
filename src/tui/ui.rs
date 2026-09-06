@@ -84,8 +84,9 @@ fn render_left_panel(frame: &mut Frame, area: Rect, state: &AppState, palette: &
     } else {
         palette.style_border_blur()
     };
-    let (title, items) = match &state.image {
+    match &state.image {
         Some(LoadedImage::Ghost11(img)) => {
+            // Partition table — Week 2 layout.
             let title = format!(" Partitions ({}) ", img.partitions.len());
             let entries: Vec<ListItem> = img
                 .partitions
@@ -108,10 +109,30 @@ fn render_left_panel(frame: &mut Frame, area: Rect, state: &AppState, palette: &
                     ListItem::new(Line::from(Span::styled(line, style)))
                 })
                 .collect();
-            (title, entries)
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .border_style(border_style)
+                .title(Span::styled(title, palette.style_title()));
+            frame.render_widget(block, area);
+            let list = List::new(entries)
+                .style(palette.style_base())
+                .highlight_style(palette.style_selection());
+            frame.render_widget(list, inset(area));
         }
-        Some(LoadedImage::GhostOld(_)) => {
-            (" Pre-11.x (Week 3) ".to_string(), Vec::new())
+        Some(LoadedImage::GhostOld(img_old)) => {
+            // Dirent tree — Week 3 layout.
+            let visible = img_old.tree.visible_indices(&img_old.expanded);
+            let title = format!(" Files ({}/{}) ", visible.len(), img_old.tree.len());
+            crate::tui::widgets::tree::render(
+                frame,
+                area,
+                &img_old.tree,
+                &visible,
+                &img_old.selected,
+                img_old.scroll,
+                palette,
+                &title,
+            );
         }
         None => {
             let title = " Image ".to_string();
@@ -125,18 +146,17 @@ fn render_left_panel(frame: &mut Frame, area: Rect, state: &AppState, palette: &
                     )))
                 })
                 .collect();
-            (title, entries)
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .border_style(border_style)
+                .title(Span::styled(title, palette.style_title()));
+            frame.render_widget(block, area);
+            let list = List::new(entries)
+                .style(palette.style_base())
+                .highlight_style(palette.style_selection());
+            frame.render_widget(list, inset(area));
         }
-    };
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(border_style)
-        .title(Span::styled(title, palette.style_title()));
-    frame.render_widget(block, area);
-    let list = List::new(items)
-        .style(palette.style_base())
-        .highlight_style(palette.style_selection());
-    frame.render_widget(list, inset(area));
+    }
 }
 
 fn render_right_panel(frame: &mut Frame, area: Rect, state: &AppState, palette: &Palette) {

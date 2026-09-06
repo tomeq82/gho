@@ -2,3 +2,4 @@
 //! outside (no internal state).
 
 pub mod hex;
+pub mod tree;

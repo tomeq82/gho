@@ -78,14 +78,22 @@ impl Dirent {
         })
     }
 
-    /// Render the 8.3 name as a `NAME.EXT` string (trimming spaces).
+    /// Render the 8.3 name as a `NAME.EXT` string (trimming spaces and
+    /// NUL padding). Real FAT dirents pad with `0x20`, but some images
+    /// in the wild use `0x00`, so we trim both. For bytes that are not
+    /// valid UTF-8 (a malformed dirent), we use a short `?` fallback so
+    /// the result stays within the normal 8.3 length budget.
     pub fn display_name(&self) -> String {
-        let name = std::str::from_utf8(&self.name)
-            .unwrap_or("????????")
-            .trim_end();
-        let ext = std::str::from_utf8(&self.ext).unwrap_or("???").trim_end();
+        let trim = |b: &[u8]| -> String {
+            std::str::from_utf8(b)
+                .unwrap_or("?")
+                .trim_end_matches([' ', '\0'])
+                .to_string()
+        };
+        let name = trim(&self.name);
+        let ext = trim(&self.ext);
         if ext.is_empty() {
-            name.to_string()
+            name
         } else {
             format!("{name}.{ext}")
         }

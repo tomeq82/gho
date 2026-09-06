@@ -176,6 +176,20 @@ impl AppState {
             _ => None,
         }
     }
+
+    pub fn image_old(&self) -> Option<&crate::tui::browse::image_old::ImageOldState> {
+        match &self.image {
+            Some(LoadedImage::GhostOld(s)) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn image_old_mut(&mut self) -> Option<&mut crate::tui::browse::image_old::ImageOldState> {
+        match &mut self.image {
+            Some(LoadedImage::GhostOld(s)) => Some(s),
+            _ => None,
+        }
+    }
 }
 
 /// Hex viewer's scroll byte offset. Kept on `AppState` so the event

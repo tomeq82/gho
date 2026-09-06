@@ -209,4 +209,68 @@ mod tests {
         handle_action(&mut state, Action::Up);
         assert_eq!(state.image11().unwrap().selected, 0);
     }
+
+    #[test]
+    fn pre11x_tree_widget_renders() {
+        use crate::tui::browse::image_old::{
+            build_dirent_tree, ImageOldState, TreePath,
+        };
+        use crate::ghostold::dirent::Dirent;
+        use crate::ghostold::stream::WalkedEntry;
+
+        let fake_dirent = |name: &str, ext: &str, attrs: u8, size: u32| -> Dirent {
+            let mut buf = [0u8; 56];
+            let n = name.as_bytes();
+            let e = ext.as_bytes();
+            buf[..n.len().min(8)].copy_from_slice(&n[..n.len().min(8)]);
+            buf[8..8 + e.len().min(3)].copy_from_slice(&e[..e.len().min(3)]);
+            buf[11] = attrs;
+            buf[28..32].copy_from_slice(&size.to_le_bytes());
+            Dirent::parse(&buf).unwrap()
+        };
+
+        let entries = vec![
+            WalkedEntry {
+                dirent_offset: 0,
+                dirent: fake_dirent("PROG", "", 0x10, 0),
+                data_start_offset: None,
+                full_block_count: 0,
+                last_block_decompressed_size: 0,
+                is_empty: true,
+            },
+            WalkedEntry {
+                dirent_offset: 1,
+                dirent: fake_dirent("APP", "EXE", 0x20, 1234),
+                data_start_offset: None,
+                full_block_count: 0,
+                last_block_decompressed_size: 0,
+                is_empty: false,
+            },
+        ];
+        let tree = build_dirent_tree(&entries);
+
+        let image11 = ImageOldState {
+            source_path: PathBuf::from("/tmp/old.gho"),
+            tree,
+            selected: crate::tui::browse::image_old::TreePath::root()
+                .join_dir("PROG"),
+            scroll: 0,
+            expanded: vec![crate::tui::browse::image_old::TreePath::root()],
+            last_loaded: std::time::Instant::now(),
+        };
+        let mut state = AppState::browse(vec!["/tmp/old.gho".into()]);
+        state.image = Some(LoadedImage::GhostOld(image11));
+        let s = render_to_string(&state);
+        // PROG directory should be visible.
+        assert!(s.contains("PROG"), "expected PROG dir entry:\n{s}");
+        // APP.EXE is hidden because root is expanded but PROG isn't.
+        assert!(!s.contains("APP.EXE"), "APP.EXE should be hidden");
+
+        // Expand PROG and re-render — APP.EXE should now appear.
+        use crate::tui::Action;
+        use crate::tui::handle_action;
+        handle_action(&mut state, Action::Enter);
+        let s = render_to_string(&state);
+        assert!(s.contains("APP.EXE"), "APP.EXE should appear after expanding PROG:\n{s}");
+    }
 }
