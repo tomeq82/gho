@@ -92,6 +92,9 @@ pub struct AppState {
 
     /// Hex viewer's top-row byte offset. Zero means "from the start".
     pub hex_scroll: usize,
+
+    /// First visible row in the diff list.
+    pub diff_scroll: usize,
 }
 
 /// Either a 11.x image or a pre-11.x image. Each variant carries the
@@ -101,6 +104,8 @@ pub struct AppState {
 pub enum LoadedImage {
     Ghost11(crate::tui::browse::image11::Image11State),
     GhostOld(crate::tui::browse::image_old::ImageOldState),
+    /// Two-image diff — see [`crate::tui::diff`].
+    Diff(crate::tui::diff::Diff),
 }
 
 impl AppState {
@@ -116,6 +121,7 @@ impl AppState {
             status: Some(StatusMessage::info("loading...")),
             image: None,
             hex_scroll: 0,
+            diff_scroll: 0,
         }
     }
 
@@ -131,6 +137,7 @@ impl AppState {
             status: Some(StatusMessage::info("loading...")),
             image: None,
             hex_scroll: 0,
+            diff_scroll: 0,
         }
     }
 
@@ -187,6 +194,13 @@ impl AppState {
     pub fn image_old_mut(&mut self) -> Option<&mut crate::tui::browse::image_old::ImageOldState> {
         match &mut self.image {
             Some(LoadedImage::GhostOld(s)) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn diff_view(&self) -> Option<&crate::tui::diff::Diff> {
+        match &self.image {
+            Some(LoadedImage::Diff(d)) => Some(d),
             _ => None,
         }
     }

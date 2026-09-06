@@ -11,6 +11,7 @@
 
 pub mod app;
 pub mod browse;
+pub mod diff;
 pub mod input;
 pub mod theme;
 pub mod ui;
@@ -278,7 +279,25 @@ fn try_load_images(state: &mut AppState) {
             }
         }
         Mode::Diff => {
-            // Diff loader comes in Week 4.
+            if state.inputs.len() != 2 {
+                state.set_status(crate::tui::app::StatusMessage::error(
+                    "gho diff requires exactly two input files",
+                ));
+                return;
+            }
+            let old_path = state.inputs[0].clone();
+            let new_path = state.inputs[1].clone();
+            match crate::tui::diff::build_diff(&old_path, &new_path) {
+                Ok(d) => {
+                    state.image = Some(LoadedImage::Diff(d));
+                    state.set_status(crate::tui::app::StatusMessage::ok("diff computed"));
+                }
+                Err(e) => {
+                    state.set_status(crate::tui::app::StatusMessage::error(format!(
+                        "diff failed: {e}"
+                    )));
+                }
+            }
         }
     }
 }

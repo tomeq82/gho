@@ -75,9 +75,76 @@ fn render_body(frame: &mut Frame, area: Rect, state: &AppState, palette: &Palett
 
     render_left_panel(frame, cols[0], state, palette);
     render_right_panel(frame, cols[1], state, palette);
+    render_diff_overlay(frame, area, state, palette);
+}
+
+/// When in Diff mode, render a single full-width list of changes with
+/// status-bar counts. This is overlaid on top of the two panels because
+/// the diff view is intentionally compact — it doesn't need a hex preview.
+fn render_diff_overlay(frame: &mut Frame, area: Rect, state: &AppState, palette: &Palette) {
+    let Some(LoadedImage::Diff(diff)) = state.image.as_ref() else {
+        return;
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(palette.style_border_focus())
+        .title(Span::styled(
+            format!(
+                " Snapshot diff  +{} -{} ~{} ={} ",
+                diff.counts.added,
+                diff.counts.removed,
+                diff.counts.modified,
+                diff.counts.unchanged,
+            ),
+            palette.style_title(),
+        ));
+    frame.render_widget(block, area);
+
+    let inner = inset(area);
+    if diff.nodes.is_empty() {
+        let p = Paragraph::new(Line::from(Span::styled(
+            "(no entries)",
+            palette.style_dim(),
+        )));
+        frame.render_widget(p, inner);
+        return;
+    }
+    let items: Vec<ListItem> = diff
+        .nodes
+        .iter()
+        .skip(state.diff_scroll)
+        .take(inner.height as usize)
+        .map(|n| {
+            let marker_style = match n.kind {
+                crate::tui::diff::ChangeKind::Added => palette.style_added(),
+                crate::tui::diff::ChangeKind::Removed => palette.style_removed(),
+                crate::tui::diff::ChangeKind::Modified => palette.style_modified(),
+                crate::tui::diff::ChangeKind::Unchanged => palette.style_dim(),
+            };
+            let marker = n.kind.marker();
+            let size_old = n.old_size.map(human_bytes).unwrap_or_else(|| "—".to_string());
+            let size_new = n.new_size.map(human_bytes).unwrap_or_else(|| "—".to_string());
+            let _line = format!("{marker}  {:<32}  {size_old:>10}  →  {size_new:>10}", n.path);
+            ListItem::new(Line::from(vec![
+                Span::styled(marker.to_string(), marker_style),
+                Span::styled(format!("  {:<32}  ", n.path), palette.style_base()),
+                Span::styled(format!("{size_old:>10}"), palette.style_dim()),
+                Span::styled("  →  ", palette.style_dim()),
+                Span::styled(format!("{size_new:>10}"), palette.style_base()),
+            ]))
+        })
+        .collect();
+    let list = List::new(items).style(palette.style_base());
+    frame.render_widget(list, inner);
 }
 
 fn render_left_panel(frame: &mut Frame, area: Rect, state: &AppState, palette: &Palette) {
+    // The diff overlay covers the whole area when in Diff mode — skip the
+    // left-panel placeholder to avoid drawing on top of it.
+    if matches!(&state.image, Some(LoadedImage::Diff(_))) {
+        return;
+    }
     let focused = state.focus == FocusPanel::Left;
     let border_style = if focused {
         palette.style_border_focus()
@@ -85,6 +152,7 @@ fn render_left_panel(frame: &mut Frame, area: Rect, state: &AppState, palette: &
         palette.style_border_blur()
     };
     match &state.image {
+        Some(LoadedImage::Diff(_)) => (), // handled above
         Some(LoadedImage::Ghost11(img)) => {
             // Partition table — Week 2 layout.
             let title = format!(" Partitions ({}) ", img.partitions.len());
@@ -160,6 +228,11 @@ fn render_left_panel(frame: &mut Frame, area: Rect, state: &AppState, palette: &
 }
 
 fn render_right_panel(frame: &mut Frame, area: Rect, state: &AppState, palette: &Palette) {
+    // In Diff mode the diff overlay covers both panels — don't draw the
+    // right-panel placeholder on top of it.
+    if matches!(&state.image, Some(LoadedImage::Diff(_))) {
+        return;
+    }
     let focused = state.focus == FocusPanel::Right;
     let border_style = if focused {
         palette.style_border_focus()
